@@ -60,7 +60,8 @@ class UrlNormalizerTest {
 
   @Test
   void preservesPortWhileLowercasingHost() {
-    assertEquals("http://example.com:8080/path", normalizer.normalize("http://EXAMPLE.com:8080/path"));
+    assertEquals(
+        "http://example.com:8080/path", normalizer.normalize("http://EXAMPLE.com:8080/path"));
   }
 
   @Test

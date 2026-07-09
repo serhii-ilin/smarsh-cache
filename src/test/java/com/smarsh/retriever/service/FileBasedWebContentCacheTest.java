@@ -98,8 +98,7 @@ public class FileBasedWebContentCacheTest {
   }
 
   @Test
-  void alsoDumpsRawContentWithContentExtension()
-      throws NoSuchAlgorithmException, IOException {
+  void alsoDumpsRawContentWithContentExtension() throws NoSuchAlgorithmException, IOException {
     FileBasedWebContentCache cache = new FileBasedWebContentCache(tempDir);
     String url = "http://example.invalid/content";
     byte[] content = "raw page source".getBytes(StandardCharsets.UTF_8);
