@@ -61,6 +61,24 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <version>4.9.8.2</version>
             </plugin>
+            <!--
+              Runs the app with a forked "java" process (exec:exec). This is required
+              because ApplicationMain uses a Java 25 instance "void main()", which the
+              in-process exec:java goal cannot launch.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <executable>java</executable>
+                    <arguments>
+                        <argument>-classpath</argument>
+                        <classpath/>
+                        <argument>com.smarsh.retriever.ApplicationMain</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
