@@ -1,5 +1,6 @@
 package com.smarsh.retriever.service;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,9 +91,27 @@ public class FileBasedWebContentCacheTest {
     Path expectedFile = tempDir.resolve(expectedFileName);
 
     assertTrue(Files.isRegularFile(expectedFile));
+    // The serialized entry plus its ".content" debug dump.
     try (var entries = Files.list(tempDir)) {
-      assertEquals(1, entries.count());
+      assertEquals(2, entries.count());
     }
+  }
+
+  @Test
+  void alsoDumpsRawContentWithContentExtension()
+      throws NoSuchAlgorithmException, IOException {
+    FileBasedWebContentCache cache = new FileBasedWebContentCache(tempDir);
+    String url = "http://example.invalid/content";
+    byte[] content = "raw page source".getBytes(StandardCharsets.UTF_8);
+
+    cache.put(url, new CachedEntry(content, OffsetDateTime.now()));
+
+    MessageDigest digest = MessageDigest.getInstance("SHA-256");
+    String hash = HexFormat.of().formatHex(digest.digest(url.getBytes(StandardCharsets.UTF_8)));
+    Path contentFile = tempDir.resolve(hash + ".content");
+
+    assertTrue(Files.isRegularFile(contentFile));
+    assertArrayEquals(content, Files.readAllBytes(contentFile));
   }
 
   @Test
