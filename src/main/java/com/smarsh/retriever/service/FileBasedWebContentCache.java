@@ -20,6 +20,7 @@ public class FileBasedWebContentCache implements ContentCache {
   private static final Logger logger =
       Logger.getLogger(FileBasedWebContentCache.class.getCanonicalName());
   private static final Path DEFAULT_DIRECTORY = Path.of(".cache");
+  private static final String CONTENT_FILE_EXTENSION = ".content";
 
   private final Path directory;
 
@@ -59,10 +60,27 @@ public class FileBasedWebContentCache implements ContentCache {
     } catch (IOException e) {
       logger.log(Level.WARNING, "Failed to write cache file: " + file, e);
     }
+    dumpContent(url, entry);
+  }
+
+  // Writes the raw content next to the cache entry for troubleshooting. Failure here is
+  // non-fatal: it must never break caching, which relies on the serialized entry above.
+  private void dumpContent(String url, CachedEntry entry) {
+    Path contentFile = contentFileFor(url);
+    try {
+      Files.write(contentFile, entry.content());
+      logger.log(Level.FINE, "Wrote content dump: " + contentFile);
+    } catch (IOException e) {
+      logger.log(Level.WARNING, "Failed to write content dump file: " + contentFile, e);
+    }
   }
 
   private Path fileFor(String url) {
     return directory.resolve(hash(url));
+  }
+
+  private Path contentFileFor(String url) {
+    return directory.resolve(hash(url) + CONTENT_FILE_EXTENSION);
   }
 
   private static String hash(String url) {
