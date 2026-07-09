@@ -25,10 +25,12 @@ class CachedWebContentRetrieverTest {
 
   @Mock private ContentCache contentCache;
 
+  private final UrlNormalizer urlNormalizer = new UrlNormalizer();
+
   @Test
   void requestIsRequired() {
     CachedWebContentRetriever retriever =
-        new CachedWebContentRetriever(httpContentFetcher, contentCache);
+        new CachedWebContentRetriever(httpContentFetcher, contentCache, urlNormalizer);
 
     NullPointerException exception =
         assertThrows(NullPointerException.class, () -> retriever.retrieve(null));
@@ -43,7 +45,7 @@ class CachedWebContentRetrieverTest {
     when(contentCache.get(url)).thenReturn(Optional.empty());
     when(httpContentFetcher.fetch(url)).thenReturn(body);
     CachedWebContentRetriever retriever =
-        new CachedWebContentRetriever(httpContentFetcher, contentCache);
+        new CachedWebContentRetriever(httpContentFetcher, contentCache, urlNormalizer);
 
     Response response = retriever.retrieve(Request.of(url));
 
@@ -59,7 +61,7 @@ class CachedWebContentRetrieverTest {
     OffsetDateTime cachedAt = OffsetDateTime.parse("2026-01-01T00:00:00Z");
     when(contentCache.get(url)).thenReturn(Optional.of(new CachedEntry(body, cachedAt)));
     CachedWebContentRetriever retriever =
-        new CachedWebContentRetriever(httpContentFetcher, contentCache);
+        new CachedWebContentRetriever(httpContentFetcher, contentCache, urlNormalizer);
 
     Response response = retriever.retrieve(Request.of(url));
 
@@ -76,7 +78,7 @@ class CachedWebContentRetrieverTest {
     when(contentCache.get(url)).thenReturn(Optional.empty());
     when(httpContentFetcher.fetch(url)).thenReturn(body);
     CachedWebContentRetriever retriever =
-        new CachedWebContentRetriever(httpContentFetcher, contentCache);
+        new CachedWebContentRetriever(httpContentFetcher, contentCache, urlNormalizer);
 
     Response response = retriever.retrieve(Request.of(url));
 
