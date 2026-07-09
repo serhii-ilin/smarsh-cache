@@ -47,6 +47,75 @@ public class HttpContentFetcherTest {
   }
 
   @Test
+  void followsRedirects() throws IOException {
+    byte[] body = "final destination".getBytes(StandardCharsets.UTF_8);
+    server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    server.createContext(
+        "/target",
+        exchange -> {
+          exchange.sendResponseHeaders(200, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    server.createContext(
+        "/source",
+        exchange -> {
+          exchange.getResponseHeaders().add("Location", "/target");
+          exchange.sendResponseHeaders(302, -1);
+          exchange.close();
+        });
+    server.start();
+
+    String url = "http://localhost:" + server.getAddress().getPort() + "/source";
+    HttpContentFetcher fetcher = new HttpContentFetcher();
+
+    byte[] content = fetcher.fetch(url);
+
+    assertEquals("final destination", new String(content, StandardCharsets.UTF_8));
+  }
+
+  @Test
+  void failsFastOnClientErrorWithoutRetrying() throws IOException {
+    AtomicInteger requests = new AtomicInteger();
+    server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    server.createContext(
+        "/missing",
+        exchange -> {
+          requests.incrementAndGet();
+          exchange.sendResponseHeaders(404, -1);
+          exchange.close();
+        });
+    server.start();
+
+    String url = "http://localhost:" + server.getAddress().getPort() + "/missing";
+    HttpContentFetcher fetcher = new HttpContentFetcher(HttpClient.newHttpClient());
+
+    assertThrows(WebContentRetrievalException.class, () -> fetcher.fetch(url));
+    assertEquals(1, requests.get());
+  }
+
+  @Test
+  void retriesOnServerErrorThenFails() throws IOException {
+    AtomicInteger requests = new AtomicInteger();
+    server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    server.createContext(
+        "/boom",
+        exchange -> {
+          requests.incrementAndGet();
+          exchange.sendResponseHeaders(500, -1);
+          exchange.close();
+        });
+    server.start();
+
+    String url = "http://localhost:" + server.getAddress().getPort() + "/boom";
+    HttpContentFetcher fetcher =
+        new HttpContentFetcher(HttpClient.newHttpClient(), 3, Duration.ofMillis(1));
+
+    assertThrows(WebContentRetrievalException.class, () -> fetcher.fetch(url));
+    assertEquals(3, requests.get());
+  }
+
+  @Test
   void retriesOnNetworkFailureAndSucceeds() {
     byte[] body = "recovered".getBytes(StandardCharsets.UTF_8);
     AtomicInteger attempts = new AtomicInteger();

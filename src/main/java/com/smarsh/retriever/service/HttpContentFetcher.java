@@ -13,13 +13,23 @@ public class HttpContentFetcher {
       Logger.getLogger(HttpContentFetcher.class.getCanonicalName());
   private static final int DEFAULT_MAX_ATTEMPTS = 3;
   private static final Duration DEFAULT_RETRY_DELAY = Duration.ofMillis(200);
+  private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+  private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
   private final HttpClient httpClient;
   private final int maxAttempts;
   private final Duration retryDelay;
+  private final Duration requestTimeout;
 
   public HttpContentFetcher() {
-    this(HttpClient.newHttpClient(), DEFAULT_MAX_ATTEMPTS, DEFAULT_RETRY_DELAY);
+    this(
+        HttpClient.newBuilder()
+            .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
+            // Follow redirects, except an HTTPS -> HTTP downgrade.
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build(),
+        DEFAULT_MAX_ATTEMPTS,
+        DEFAULT_RETRY_DELAY);
   }
 
   HttpContentFetcher(HttpClient httpClient) {
@@ -30,6 +40,7 @@ public class HttpContentFetcher {
     this.httpClient = httpClient;
     this.maxAttempts = maxAttempts;
     this.retryDelay = retryDelay;
+    this.requestTimeout = DEFAULT_REQUEST_TIMEOUT;
   }
 
   public byte[] fetch(String url) {
@@ -63,10 +74,25 @@ public class HttpContentFetcher {
   }
 
   byte[] send(String url) throws IOException, InterruptedException {
-    HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(url)).GET().build();
+    HttpRequest httpRequest =
+        HttpRequest.newBuilder(URI.create(url)).GET().timeout(requestTimeout).build();
     HttpResponse<byte[]> httpResponse =
         httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
-    return httpResponse.body();
+    int statusCode = httpResponse.statusCode();
+    if (statusCode >= 200 && statusCode < 300) {
+      return httpResponse.body();
+    }
+    if (isRetryable(statusCode)) {
+      // Thrown as IOException so the retry loop attempts the request again.
+      throw new IOException("Received retryable HTTP status " + statusCode + " for URL: " + url);
+    }
+    // Client errors (e.g. 404) will not succeed on retry, so fail fast.
+    throw new WebContentRetrievalException(
+        "Received HTTP status " + statusCode + " for URL: " + url);
+  }
+
+  private static boolean isRetryable(int statusCode) {
+    return statusCode == 429 || statusCode >= 500;
   }
 
   private void sleepBeforeRetry() {
