@@ -46,7 +46,7 @@ public class FileBasedWebContentCache implements ContentCache {
     try {
       return Optional.of(deserialize(Files.readAllBytes(file)));
     } catch (IOException | ClassNotFoundException | RuntimeException e) {
-      logger.log(Level.FINE, "Failed to read cache file: " + file, e);
+      logger.log(Level.WARNING, "Failed to read cache file: " + file, e);
       return Optional.empty();
     }
   }

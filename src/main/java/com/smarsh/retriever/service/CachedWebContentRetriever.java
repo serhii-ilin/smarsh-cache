@@ -30,7 +30,7 @@ public class CachedWebContentRetriever implements ContentRetriever {
   @Override
   public Response retrieve(Request request) {
     Objects.requireNonNull(request, "request is required");
-    String url = urlNormalizer.normalize(request.getUrl());
+    String url = urlNormalizer.normalize(request.url());
     if (logger.isLoggable(Level.INFO)) {
       logger.info("Retrieving content for URL: " + url);
     }
