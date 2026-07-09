@@ -7,6 +7,7 @@ import com.smarsh.retriever.service.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
@@ -32,7 +33,7 @@ public class ApplicationMain {
       Response response = retriever.retrieve(Request.of(url));
       IO.println("URL: " + response.url());
       IO.println("Timestamp: " + response.createdAt());
-      IO.println("Content: " + new String(response.content()));
+      IO.println("Content: " + new String(response.content(), StandardCharsets.UTF_8));
     } catch (RuntimeException e) {
       logger.log(Level.SEVERE, "Failed to retrieve content for URL: " + url, e);
       IO.println("Failed to retrieve content: " + e.getMessage());
