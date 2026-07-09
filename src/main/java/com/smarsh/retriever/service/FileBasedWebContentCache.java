@@ -39,15 +39,14 @@ public class FileBasedWebContentCache implements ContentCache {
   @Override
   public Optional<CachedEntry> get(String url) {
     Path file = fileFor(url);
+    logger.log(Level.FINE, "Looking for cache file: " + file);
     if (!Files.isRegularFile(file)) {
       return Optional.empty();
     }
     try {
       return Optional.of(deserialize(Files.readAllBytes(file)));
     } catch (IOException | ClassNotFoundException | RuntimeException e) {
-      if (logger.isLoggable(Level.WARNING)) {
-        logger.log(Level.WARNING, "Ignoring malformed cache file: " + file, e);
-      }
+      logger.log(Level.FINE, "Failed to read cache file: " + file, e);
       return Optional.empty();
     }
   }
@@ -71,6 +70,7 @@ public class FileBasedWebContentCache implements ContentCache {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       return HexFormat.of().formatHex(digest.digest(url.getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException e) {
+      logger.log(Level.WARNING, "Failed to hash cache file: " + url, e);
       throw new IllegalStateException("SHA-256 is not available", e);
     }
   }
